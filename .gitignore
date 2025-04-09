@@ -175,4 +175,4 @@ cython_debug/
 
 data/
 
-UNet_acc_valid_79.pt
+model_weights

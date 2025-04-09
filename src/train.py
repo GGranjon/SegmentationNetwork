@@ -21,6 +21,7 @@ from models.AlexNet import AlexNet
 from models.CNNVanilla import CnnVanilla
 from models.ResNet import ResNet
 from models.UNet import UNet
+from models.yourSegNet import YourSegNet
 from models.VggNet import VggNet
 from torchvision import datasets
 
@@ -56,6 +57,8 @@ def argument_parser():
     parser.add_argument('--predict', type=str,
                         help="Name of the file containing model weights used to make "
                              "segmentation prediction on test data")
+    parser.add_argument('--save', type=str, help="path where to save the model")
+    parser.add_argument("--load", type=str, help="load the model given the path")
     return parser.parse_args()
 
 
@@ -68,6 +71,7 @@ if __name__ == "__main__":
     val_set = args.validation
     learning_rate = args.lr
     data_augment = args.data_aug
+
     if data_augment:
         print('Data augmentation activated!')
     else:
@@ -122,8 +126,10 @@ if __name__ == "__main__":
     elif args.model == 'ResNet':
         model = ResNet(num_classes=10)
     elif args.model == 'yourSegNet':
-        print("Modèle " + args.model + " non implémenté")
-        exit(0)
+        model = YourSegNet(num_classes=4)
+        args.dataset = 'acdc'
+        train_set = HDF5Dataset('train', acdc_hdf5_file, transform=acdc_base_transform)
+        test_set = HDF5Dataset('test', acdc_hdf5_file, transform=acdc_base_transform)
     elif args.model == 'yourUNet':
         print("Modèle " + args.model + " non implémenté")
         exit(0)
@@ -133,14 +139,27 @@ if __name__ == "__main__":
         train_set = HDF5Dataset('train', acdc_hdf5_file, transform=acdc_base_transform)
         test_set = HDF5Dataset('test', acdc_hdf5_file, transform=acdc_base_transform)
 
-    model_trainer = CNNTrainTestManager(model=model,
-                                        trainset=train_set,
-                                        testset=test_set,
-                                        batch_size=batch_size,
-                                        loss_fn=nn.CrossEntropyLoss(),
-                                        optimizer_factory=optimizer_factory,
-                                        validation=val_set,
-                                        use_cuda=True)
+    if args.load is not None:
+        model.load_weights(args.load)
+    if args.save is not None:
+        model_trainer = CNNTrainTestManager(model=model,
+                                            trainset=train_set,
+                                            testset=test_set,
+                                            batch_size=batch_size,
+                                            loss_fn=nn.CrossEntropyLoss(),
+                                            optimizer_factory=optimizer_factory,
+                                            validation=val_set,
+                                            use_cuda=True,
+                                            save=args.save)
+    else:
+        model_trainer = CNNTrainTestManager(model=model,
+                                            trainset=train_set,
+                                            testset=test_set,
+                                            batch_size=batch_size,
+                                            loss_fn=nn.CrossEntropyLoss(),
+                                            optimizer_factory=optimizer_factory,
+                                            validation=val_set,
+                                            use_cuda=True)
 
     if args.predict is not None:
         model.load_weights(args.predict)

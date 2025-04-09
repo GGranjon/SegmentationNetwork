@@ -33,7 +33,8 @@ class CNNTrainTestManager(object):
                  optimizer_factory: Callable[[torch.nn.Module], torch.optim.Optimizer],
                  batch_size=1,
                  validation=None,
-                 use_cuda=False):
+                 use_cuda=False,
+                 save=None):
         """
         Args:
             model: model to train
@@ -52,6 +53,7 @@ class CNNTrainTestManager(object):
                           "use_cuda=False to {}()."
                           .format(self.__class__.__name__), RuntimeWarning)
             device_name = 'cpu'
+        print(device_name)
 
         self.device = torch.device(device_name)
         if validation is not None:
@@ -64,6 +66,7 @@ class CNNTrainTestManager(object):
         self.model = self.model.to(self.device)
         self.use_cuda = use_cuda
         self.metric_values = {}
+        self.save = save
 
     def train(self, num_epochs):
         """
@@ -124,11 +127,14 @@ class CNNTrainTestManager(object):
                     #t.set_postfix({loss='{:05.3f}'.format(train_loss / (i + 1))})
                     t.set_postfix({'Train loss': train_loss / (i + 1), "train_acc":  train_acc / (i + 1)})
                     t.update()
+            
             # evaluate the model on validation data after each epoch
             self.metric_values['train_loss'].append(np.mean(train_losses))
             self.metric_values['train_acc'].append(np.mean(train_accuracies))
             self.evaluate_on_validation_set()
 
+        if self.save is not None:
+            torch.save(self.model.state_dict(), self.save)
         print("Finished training.")
 
     def evaluate_on_validation_set(self):
